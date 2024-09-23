@@ -230,7 +230,7 @@ func (c *Client) AbortMultipartUpload(ctx context.Context, cmd AbortMultipartUpl
 }
 
 type ListObjectsCommand struct {
-	BucketName string
+	Bucket     string
 	StartAfter string
 	// MaxKeys limits the results to max keys. Defaults to 1000. Max is 1000.
 	MaxKeys   int
@@ -260,7 +260,7 @@ func (c *Client) ListObjects(ctx context.Context, r ListObjectsCommand) (*ListOb
 	q.Add("prefix", r.Prefix)
 	q.Encode()
 	res, body, err := c.doReq(ctx, R{
-		path:  r.BucketName,
+		path:  r.Bucket,
 		query: q,
 	})
 	if err != nil {
