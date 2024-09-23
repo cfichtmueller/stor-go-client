@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -17,6 +19,16 @@ type Client struct {
 	httpClient *http.Client
 	host       string
 	auth       string
+}
+
+type R struct {
+	method        string
+	path          string
+	query         url.Values
+	contentType   string
+	contentLength int
+	body          io.Reader
+	header        http.Header
 }
 
 // NewClient creates a new client to connect to a STOR server.
@@ -45,16 +57,43 @@ func NewClient(opts ...*ClientOptions) *Client {
 	return client
 }
 
-func (c *Client) doReq(ctx context.Context, method, path, contentType string, body io.Reader) (*http.Response, []byte, error) {
-	u := fmt.Sprintf("%s/%s", c.host, path)
-	req, err := http.NewRequestWithContext(ctx, method, u, body)
+func (c *Client) newUrl() *url.URL {
+	u, err := url.Parse(c.host)
+	if err != nil {
+		panic(err)
+	}
+	return u
+}
+
+func (c *Client) doReq(ctx context.Context, r R) (*http.Response, []byte, error) {
+	method := r.method
+	if method == "" {
+		method = "GET"
+	}
+	u := fmt.Sprintf("%s/%s", c.host, r.path)
+	if r.query != nil && len(r.query) > 0 {
+		u = u + "?" + r.query.Encode()
+	}
+	req, err := http.NewRequestWithContext(ctx, method, u, r.body)
 	if err != nil {
 		return nil, nil, err
 	}
 	req.Header.Add("Authorization", c.auth)
-	if contentType != "" {
-		req.Header.Add("Content-Type", contentType)
+	if r.contentType != "" {
+		req.Header.Add("Content-Type", r.contentType)
 	}
+	if r.contentLength != 0 {
+		req.Header.Add("Content-Length", strconv.Itoa(r.contentLength))
+	}
+
+	if r.header != nil {
+		for k, v := range r.header {
+			for _, vv := range v {
+				req.Header.Add(k, vv)
+			}
+		}
+	}
+
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, nil, err
