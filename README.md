@@ -15,6 +15,12 @@ opts := stor.NewClientOptions().
 
 storClient := stor.NewClient(opts)
 
-err := storClient.CreateBucket(context.Background(), "my-first-bucket")
-objects, err := storClient.List(context.Background(), "my-first-bucket", "", 1000)
+err := storClient.CreateBucket(context.Background(), stor.CreateBucketCommand{
+    Name: "my-first-bucket",
+})
+
+objects, err := storClient.List(context.Background(), stor.ListObjectsCommand{
+    Bucket: "my-first-bucket",
+    MaxKeys: 1000
+})
 ```
