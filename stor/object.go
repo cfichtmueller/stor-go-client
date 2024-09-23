@@ -50,7 +50,7 @@ func (c *Client) CreateObject(ctx context.Context, cmd CreateObjectCommand) (*Cr
 	if cmd.IfNoneMatch {
 		header.Set("If-None-Match", "*")
 	}
-	res, body, err := c.doReq(ctx, R{
+	res, _, err := c.doReq(ctx, R{
 		method:      "PUT",
 		path:        objectPath(cmd.Bucket, cmd.Key),
 		header:      header,
@@ -64,11 +64,10 @@ func (c *Client) CreateObject(ctx context.Context, cmd CreateObjectCommand) (*Cr
 		//TODO: map error
 		return nil, fmt.Errorf("unable to create object: %v", res.StatusCode)
 	}
-	var result CreateObjectResult
-	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
+
+	return &CreateObjectResult{
+		ETag: res.Header.Get("ETag"),
+	}, nil
 }
 
 type CreateMultipartUploadCommand struct {
