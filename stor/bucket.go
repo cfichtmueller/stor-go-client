@@ -76,3 +76,22 @@ func (c *Client) CreateBucket(ctx context.Context, cmd CreateBucketCommand) (*Bu
 
 	return &bucket, nil
 }
+
+type DeleteBucketCommand struct {
+	Name string
+}
+
+func (c *Client) DeleteBucket(ctx context.Context, cmd DeleteBucketCommand) error {
+	res, _, err := c.doReq(ctx, R{
+		method: "DELETE",
+		path:   cmd.Name,
+	})
+	if err != nil {
+		return err
+	}
+	if res.StatusCode != 204 {
+		//TODO: map error
+		return fmt.Errorf("unable to delete bucket: %v", res.StatusCode)
+	}
+	return nil
+}
