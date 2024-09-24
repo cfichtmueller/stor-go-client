@@ -107,39 +107,28 @@ type CompleteArchiveCommand struct {
 	IfNoneMatch bool
 }
 
-type CompleteArchiveResult struct {
-	Bucket string `json:"bucket"`
-	Key    string `json:"key"`
-	ETag   string `json:"etag"`
-}
-
-func (c *Client) CompleteArchive(ctx context.Context, cmd CompleteArchiveCommand) (*CompleteArchiveResult, error) {
+func (c *Client) CompleteArchive(ctx context.Context, cmd CompleteArchiveCommand) error {
 	query := url.Values{}
 	query.Set("archive-id", cmd.ArchiveId)
 	header := http.Header{}
 	if cmd.IfNoneMatch {
 		header.Set("If-None-Match", "*")
 	}
-	res, responseBody, err := c.doReq(ctx, R{
+	res, _, err := c.doReq(ctx, R{
 		method: "POST",
 		path:   objectPath(cmd.Bucket, cmd.Key),
 		query:  query,
 		header: header,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if res.StatusCode != 200 {
+	if res.StatusCode != 204 {
 		//TODO: map error
-		return nil, fmt.Errorf("unable to complete archive: %v", res.StatusCode)
+		return fmt.Errorf("unable to complete archive: %v", res.StatusCode)
 	}
 
-	var result CompleteArchiveResult
-	if err := json.Unmarshal(responseBody, &result); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
+	return nil
 }
 
 type AbortArchiveCommand struct {
