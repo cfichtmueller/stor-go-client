@@ -103,7 +103,7 @@ type CompleteArchiveCommand struct {
 	Bucket    string
 	Key       string
 	ArchiveId string
-	// IfNoneMatch creates the arvhice only if the object key name does not already exist in the bucket
+	// IfNoneMatch creates the archive only if the object key name does not already exist in the bucket
 	IfNoneMatch bool
 }
 
