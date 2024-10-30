@@ -276,6 +276,51 @@ func (c *Client) ListObjects(ctx context.Context, r ListObjectsCommand) (*ListOb
 	return &listResult, nil
 }
 
+type ReadObjectResult struct {
+	ContentType   string
+	ContentLength int64
+	body          io.ReadCloser
+}
+
+func (r *ReadObjectResult) Read(p []byte) (int, error) {
+	return r.body.Read(p)
+}
+
+func (r *ReadObjectResult) Close() error {
+	return r.body.Close()
+}
+
+// ReadObject reads an object from STOR.
+// Clients are expected to read and close the returned ReadObjectResult.
+// If the object cannot be found, the method returns ErrObjectNotFound.
+func (c *Client) ReadObject(ctx context.Context, bucket, key string) (*ReadObjectResult, error) {
+	req, err := c.createReq(ctx, R{
+		path: bucket + "/" + key,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode == 404 {
+		return nil, ErrObjectNotFound
+	}
+
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("unexpected status code: %v", res.StatusCode)
+	}
+
+	return &ReadObjectResult{
+		ContentType:   res.Header.Get("Content-Type"),
+		ContentLength: res.ContentLength,
+		body:          res.Body,
+	}, nil
+}
+
 type DeleteObjectsCommand struct {
 	Bucket  string
 	Objects []ObjectReference

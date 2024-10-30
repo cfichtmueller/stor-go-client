@@ -65,18 +65,18 @@ func (c *Client) newUrl() *url.URL {
 	return u
 }
 
-func (c *Client) doReq(ctx context.Context, r R) (*http.Response, []byte, error) {
+func (c *Client) createReq(ctx context.Context, r R) (*http.Request, error) {
 	method := r.method
 	if method == "" {
 		method = "GET"
 	}
 	u := fmt.Sprintf("%s/%s", c.host, r.path)
-	if r.query != nil && len(r.query) > 0 {
+	if len(r.query) > 0 {
 		u = u + "?" + r.query.Encode()
 	}
 	req, err := http.NewRequestWithContext(ctx, method, u, r.body)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	req.Header.Add("Authorization", c.auth)
 	if r.contentType != "" {
@@ -94,6 +94,14 @@ func (c *Client) doReq(ctx context.Context, r R) (*http.Response, []byte, error)
 		}
 	}
 
+	return req, nil
+}
+
+func (c *Client) doReq(ctx context.Context, r R) (*http.Response, []byte, error) {
+	req, err := c.createReq(ctx, r)
+	if err != nil {
+		return nil, nil, err
+	}
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, nil, err
