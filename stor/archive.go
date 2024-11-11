@@ -14,7 +14,12 @@ import (
 )
 
 var (
-	ArchiveTypeZip = "zip"
+	ArchiveTypeZip         = "zip"
+	ArchiveStatePending    = "pending"
+	ArchiveStateProcessing = "processing"
+	ArchiveStateComplete   = "complete"
+	ArchiveStateFailed     = "failed"
+	ErrArchiveNotFound     = fmt.Errorf("archive not found")
 )
 
 type CreateArchiveCommand struct {
@@ -153,4 +158,42 @@ func (c *Client) AbortArchive(ctx context.Context, cmd AbortArchiveCommand) erro
 	}
 
 	return nil
+}
+
+type GetArchiveCommand struct {
+	Bucket    string
+	Key       string
+	ArchiveId string
+}
+
+type GetArchiveResult struct {
+	ID    string `json:"id"`
+	State string `json:"state"`
+	Type  string `json:"type"`
+}
+
+func (c *Client) GetArchive(ctx context.Context, cmd GetArchiveCommand) (*GetArchiveResult, error) {
+	query := url.Values{}
+	query.Set("archive-id", cmd.ArchiveId)
+	res, body, err := c.doReq(ctx, R{
+		method: "GET",
+		path:   objectPath(cmd.Bucket, cmd.Key),
+		query:  query,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode == 404 {
+		return nil, ErrArchiveNotFound
+	} else if res.StatusCode != 200 {
+		//TODO: map error
+		return nil, fmt.Errorf("unable to get archive: %v", res.StatusCode)
+	}
+
+	var result GetArchiveResult
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal server response: %v", err)
+	}
+
+	return &result, nil
 }
