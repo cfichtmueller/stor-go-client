@@ -70,6 +70,42 @@ func (c *Client) CreateObject(ctx context.Context, cmd CreateObjectCommand) (*Cr
 	}, nil
 }
 
+type CopyObjectCommand struct {
+	// The bucket to create the object in
+	Bucket string
+	// The key of the object to copy
+	SourceKey string
+	// The key of the object to be created or updated
+	DestKey string
+	// IfNoneMatch uploads the object only if the object key name does not already exist in the bucket
+	IfNoneMatch bool
+}
+
+// CopyObject copies an object. If the destination object already exists, it will be updated.
+func (c *Client) CopyObject(ctx context.Context, cmd CopyObjectCommand) (*CreateObjectResult, error) {
+	header := http.Header{}
+	header.Set("Stor-Copy-Source", cmd.SourceKey)
+	if cmd.IfNoneMatch {
+		header.Set("If-None-Match", "*")
+	}
+	res, _, err := c.doReq(ctx, R{
+		method: "PUT",
+		path:   objectPath(cmd.Bucket, cmd.DestKey),
+		header: header,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode != 204 {
+		//TODO: map error
+		return nil, fmt.Errorf("unable to create object: %v", res.StatusCode)
+	}
+
+	return &CreateObjectResult{
+		ETag: res.Header.Get("ETag"),
+	}, nil
+}
+
 type CreateMultipartUploadCommand struct {
 	Bucket      string
 	Key         string
