@@ -393,7 +393,7 @@ func (c *Client) DeleteObjects(ctx context.Context, cmd DeleteObjectsCommand) (*
 		return nil, err
 	}
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("unable to delete objects: %d", res.StatusCode)
+		return nil, fmt.Errorf("unable to delete objects (%d): %s", res.StatusCode, string(body))
 	}
 
 	var result DeleteObjectsResult
