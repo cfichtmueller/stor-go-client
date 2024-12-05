@@ -19,7 +19,7 @@ import (
 type Object struct {
 	Key         string    `json:"key"`
 	ContentType string    `json:"contentType"`
-	Size        uint64    `json:"size"`
+	Size        int64     `json:"size"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
 

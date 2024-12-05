@@ -15,8 +15,8 @@ import (
 
 type Bucket struct {
 	Name      string    `json:"name"`
-	Objects   uint64    `json:"objects"`
-	Size      uint64    `json:"size"`
+	Objects   int64     `json:"objects"`
+	Size      int64     `json:"size"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 
