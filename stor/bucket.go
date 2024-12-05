@@ -42,7 +42,7 @@ func (c *Client) ListBuckets(ctx context.Context, cmd ListBucketsCommand) (*List
 	if err != nil {
 		return nil, err
 	}
-	if res.StatusCode != 201 {
+	if res.StatusCode != 200 {
 		//TODO: map error
 		return nil, fmt.Errorf("unable to list buckets: %v", res.StatusCode)
 	}
