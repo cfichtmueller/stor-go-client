@@ -312,6 +312,60 @@ func (c *Client) ListObjects(ctx context.Context, r ListObjectsCommand) (*ListOb
 	return &listResult, nil
 }
 
+type HeadObjectCommand struct {
+	Bucket            string
+	Key               string
+	IfMatch           string
+	IfModifiedSince   time.Time
+	IfNoneMatch       string
+	IfUnmodifiedSince time.Time
+}
+
+type HeadObjectResult struct {
+	ContentType   string
+	ContentLength int64
+}
+
+func (c *Client) HeadObject(ctx context.Context, cmd HeadObjectCommand) (*HeadObjectResult, error) {
+	header := http.Header{}
+	if cmd.IfMatch != "" {
+		header.Set("If-Match", cmd.IfMatch)
+	}
+	if !cmd.IfModifiedSince.IsZero() {
+		header.Set("If-Modified-Since", cmd.IfModifiedSince.Format(time.RFC3339))
+	}
+	if cmd.IfNoneMatch != "" {
+		header.Set("If-None-Match", cmd.IfNoneMatch)
+	}
+	if !cmd.IfUnmodifiedSince.IsZero() {
+		header.Set("If-Unmodified-Since", cmd.IfUnmodifiedSince.Format(time.RFC3339))
+	}
+	req, err := c.createReq(ctx, R{
+		method: http.MethodHead,
+		path:   objectPath(cmd.Bucket, cmd.Key),
+	})
+	if err != nil {
+		return nil, err
+	}
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode == 404 {
+		return nil, ErrObjectNotFound
+	}
+
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("unexpected status code: %v", res.StatusCode)
+	}
+
+	return &HeadObjectResult{
+		ContentType:   res.Header.Get("Content-Type"),
+		ContentLength: res.ContentLength,
+	}, nil
+}
+
 type ReadObjectResult struct {
 	ContentType   string
 	ContentLength int64
