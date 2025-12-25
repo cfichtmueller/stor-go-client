@@ -70,6 +70,10 @@ func (c *Client) CreateBucket(ctx context.Context, cmd CreateBucketCommand) (*Bu
 		return nil, err
 	}
 	if res.StatusCode != 201 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return nil, err
+		}
 		//TODO: map error
 		return nil, fmt.Errorf("unable to create bucket: %v", res.StatusCode)
 	}
@@ -86,7 +90,7 @@ type DeleteBucketCommand struct {
 }
 
 func (c *Client) DeleteBucket(ctx context.Context, cmd DeleteBucketCommand) error {
-	res, _, err := c.doReq(ctx, R{
+	res, body, err := c.doReq(ctx, R{
 		method: "DELETE",
 		path:   cmd.Name,
 	})
@@ -94,6 +98,10 @@ func (c *Client) DeleteBucket(ctx context.Context, cmd DeleteBucketCommand) erro
 		return err
 	}
 	if res.StatusCode != 204 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return err
+		}
 		//TODO: map error
 		return fmt.Errorf("unable to delete bucket: %v", res.StatusCode)
 	}

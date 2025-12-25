@@ -38,6 +38,10 @@ func (c *Client) CreateNonce(ctx context.Context, cmd CreateNonceCommand) (*Crea
 		return nil, err
 	}
 	if res.StatusCode != 201 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return nil, err
+		}
 		//TODO: map error
 		return nil, fmt.Errorf("unable to create nonce: %v", res.StatusCode)
 	}

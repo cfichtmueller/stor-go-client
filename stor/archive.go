@@ -19,7 +19,6 @@ var (
 	ArchiveStateProcessing = "processing"
 	ArchiveStateComplete   = "complete"
 	ArchiveStateFailed     = "failed"
-	ErrArchiveNotFound     = fmt.Errorf("archive not found")
 )
 
 type CreateArchiveCommand struct {
@@ -48,6 +47,10 @@ func (c *Client) CreateArchive(ctx context.Context, cmd CreateArchiveCommand) (*
 		return nil, err
 	}
 	if res.StatusCode != 200 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return nil, err
+		}
 		//TODO: map error
 		return nil, fmt.Errorf("unable to create archive: %v", res.StatusCode)
 	}
@@ -97,6 +100,10 @@ func (c *Client) AddArchiveEntries(ctx context.Context, cmd AddArchiveEntriesCom
 		return err
 	}
 	if res.StatusCode != 200 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return err
+		}
 		//TODO: map error
 		return fmt.Errorf("unable to add archive entries: %v", res.StatusCode)
 	}
@@ -119,7 +126,7 @@ func (c *Client) CompleteArchive(ctx context.Context, cmd CompleteArchiveCommand
 	if cmd.IfNoneMatch {
 		header.Set("If-None-Match", "*")
 	}
-	res, _, err := c.doReq(ctx, R{
+	res, body, err := c.doReq(ctx, R{
 		method: "POST",
 		path:   objectPath(cmd.Bucket, cmd.Key),
 		query:  query,
@@ -129,6 +136,10 @@ func (c *Client) CompleteArchive(ctx context.Context, cmd CompleteArchiveCommand
 		return err
 	}
 	if res.StatusCode != 204 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return err
+		}
 		//TODO: map error
 		return fmt.Errorf("unable to complete archive: %v", res.StatusCode)
 	}
@@ -145,7 +156,7 @@ type AbortArchiveCommand struct {
 func (c *Client) AbortArchive(ctx context.Context, cmd AbortArchiveCommand) error {
 	query := url.Values{}
 	query.Set("archive-id", cmd.ArchiveId)
-	res, _, err := c.doReq(ctx, R{
+	res, body, err := c.doReq(ctx, R{
 		method: "DELETE",
 		path:   objectPath(cmd.Bucket, cmd.Key),
 		query:  query,
@@ -154,6 +165,10 @@ func (c *Client) AbortArchive(ctx context.Context, cmd AbortArchiveCommand) erro
 		return err
 	}
 	if res.StatusCode != 204 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return err
+		}
 		return fmt.Errorf("unable to abort archive: %d", res.StatusCode)
 	}
 
@@ -183,9 +198,11 @@ func (c *Client) GetArchive(ctx context.Context, cmd GetArchiveCommand) (*GetArc
 	if err != nil {
 		return nil, err
 	}
-	if res.StatusCode == 404 {
-		return nil, ErrArchiveNotFound
-	} else if res.StatusCode != 200 {
+	if res.StatusCode != 200 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return nil, err
+		}
 		//TODO: map error
 		return nil, fmt.Errorf("unable to get archive: %v", res.StatusCode)
 	}

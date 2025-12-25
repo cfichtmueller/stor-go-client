@@ -50,7 +50,7 @@ func (c *Client) CreateObject(ctx context.Context, cmd CreateObjectCommand) (*Cr
 	if cmd.IfNoneMatch {
 		header.Set("If-None-Match", "*")
 	}
-	res, _, err := c.doReq(ctx, R{
+	res, body, err := c.doReq(ctx, R{
 		method:      "PUT",
 		path:        objectPath(cmd.Bucket, cmd.Key),
 		header:      header,
@@ -61,6 +61,10 @@ func (c *Client) CreateObject(ctx context.Context, cmd CreateObjectCommand) (*Cr
 		return nil, err
 	}
 	if res.StatusCode != 204 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return nil, err
+		}
 		//TODO: map error
 		return nil, fmt.Errorf("unable to create object: %v", res.StatusCode)
 	}
@@ -88,7 +92,7 @@ func (c *Client) CopyObject(ctx context.Context, cmd CopyObjectCommand) (*Create
 	if cmd.IfNoneMatch {
 		header.Set("If-None-Match", "*")
 	}
-	res, _, err := c.doReq(ctx, R{
+	res, body, err := c.doReq(ctx, R{
 		method: "PUT",
 		path:   objectPath(cmd.Bucket, cmd.DestKey),
 		header: header,
@@ -97,6 +101,10 @@ func (c *Client) CopyObject(ctx context.Context, cmd CopyObjectCommand) (*Create
 		return nil, err
 	}
 	if res.StatusCode != 204 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return nil, err
+		}
 		//TODO: map error
 		return nil, fmt.Errorf("unable to create object: %v", res.StatusCode)
 	}
@@ -132,6 +140,10 @@ func (c *Client) CreateMultipartUpload(ctx context.Context, cmd CreateMultipartU
 		return nil, err
 	}
 	if res.StatusCode != 200 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return nil, err
+		}
 		//TODO: map error
 		return nil, fmt.Errorf("unable to create multipart upload: %v", res.StatusCode)
 	}
@@ -162,7 +174,7 @@ func (c *Client) UploadPart(ctx context.Context, cmd UploadPartCommand) (*Upload
 	query := url.Values{}
 	query.Set("upload-id", cmd.UploadId)
 	query.Set("part-number", strconv.Itoa(cmd.PartNumber))
-	res, _, err := c.doReq(ctx, R{
+	res, body, err := c.doReq(ctx, R{
 		method:        "PUT",
 		path:          objectPath(cmd.Bucket, cmd.Key),
 		query:         query,
@@ -172,6 +184,10 @@ func (c *Client) UploadPart(ctx context.Context, cmd UploadPartCommand) (*Upload
 		return nil, err
 	}
 	if res.StatusCode != 200 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return nil, err
+		}
 		//TODO: map error
 		return nil, fmt.Errorf("unable to upload part: %v", res.StatusCode)
 	}
@@ -229,6 +245,10 @@ func (c *Client) CompleteMultipartUpload(ctx context.Context, cmd CompleteMultip
 		return nil, err
 	}
 	if res.StatusCode != 200 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return nil, err
+		}
 		//TODO: map error
 		return nil, fmt.Errorf("unable to complete upload: %v", res.StatusCode)
 	}
@@ -250,7 +270,7 @@ type AbortMultipartUploadCommand struct {
 func (c *Client) AbortMultipartUpload(ctx context.Context, cmd AbortMultipartUploadCommand) error {
 	query := url.Values{}
 	query.Set("upload-id", cmd.UploadId)
-	res, _, err := c.doReq(ctx, R{
+	res, body, err := c.doReq(ctx, R{
 		method: "DELETE",
 		path:   objectPath(cmd.Bucket, cmd.Key),
 		query:  query,
@@ -259,6 +279,10 @@ func (c *Client) AbortMultipartUpload(ctx context.Context, cmd AbortMultipartUpl
 		return err
 	}
 	if res.StatusCode != 204 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return err
+		}
 		return fmt.Errorf("unable to abort multipart upload: %d", res.StatusCode)
 	}
 
@@ -303,6 +327,10 @@ func (c *Client) ListObjects(ctx context.Context, r ListObjectsCommand) (*ListOb
 		return nil, err
 	}
 	if res.StatusCode != 200 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return nil, err
+		}
 		return nil, fmt.Errorf("unable to list objects: %d", res.StatusCode)
 	}
 	var listResult ListObjectsResult
@@ -357,6 +385,14 @@ func (c *Client) HeadObject(ctx context.Context, cmd HeadObjectCommand) (*HeadOb
 	}
 
 	if res.StatusCode != 200 {
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+		errResponse, ok := mapErrorResponse(body)
+		if ok {
+			return nil, errResponse
+		}
 		return nil, fmt.Errorf("unexpected status code: %v", res.StatusCode)
 	}
 
@@ -401,6 +437,14 @@ func (c *Client) ReadObject(ctx context.Context, bucket, key string) (*ReadObjec
 	}
 
 	if res.StatusCode != 200 {
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+		errResponse, ok := mapErrorResponse(body)
+		if ok {
+			return nil, errResponse
+		}
 		return nil, fmt.Errorf("unexpected status code: %v", res.StatusCode)
 	}
 
@@ -447,6 +491,10 @@ func (c *Client) DeleteObjects(ctx context.Context, cmd DeleteObjectsCommand) (*
 		return nil, err
 	}
 	if res.StatusCode != 200 {
+		err, ok := mapErrorResponse(body)
+		if ok {
+			return nil, err
+		}
 		return nil, fmt.Errorf("unable to delete objects (%d): %s", res.StatusCode, string(body))
 	}
 
